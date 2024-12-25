@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:latest
+    container_name: nginx-web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./html:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Menambahkan konfigurasi kustom untuk Nginx
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    depends_on:
+      - db  # Menjamin bahwa web hanya berjalan setelah database siap
+    restart: unless-stopped  # Restart container jika mati
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"  # Menyimpan log ke dalam file JSON
+      options:
+        max-size: "10m"  # Menetapkan batasan ukuran file log per container
+
+  db:
+    image: mysql:latest
+    container_name: mysql-db
+    ports:
+      - "3306:3306"  # Menyambungkan port MySQL dari host ke container
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped  # Restart container jika mati
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s  # Mengatur healthcheck untuk MySQL
+    logging:
+      driver: "json-file"  # Menyimpan log ke dalam file JSON
+      options:
+        max-size: "10m"  # Menetapkan batasan ukuran file log per container
+
+volumes:
+  mysql-data:  # Volume untuk data MySQL yang persisten
+
+networks:
+  app-network:
+    driver: bridge  # Jaringan internal yang menghubungkan layanan-layanan Docker
